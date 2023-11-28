@@ -16,22 +16,27 @@ class Client:
     def client_close(self):
         self.client_socket.close()
 
-    def send(self, message):
-        self.send_thread = Thread(target=self.send_message, daemon=True, args=(message,))
+    def send(self, message, file_id):
+        self.send_thread = Thread(target=self.send_message, daemon=True, args=(message, file_id))
         self.send_thread.start()
 
     def receive_message(self):
         while True:
             try:
-                message = self.client_socket.recv(1024).decode('utf-8')
-                if message == "":
-                    continue
-                else:
-                    print(message)
-                # messagebox.showinfo("接收", f"加密端消息:{message}")
+                message1 = self.client_socket.recv(1024).decode('utf-8')
+                message2 = self.client_socket.recv(1024).decode('utf-8')
+                if not message1:
+                    break
+                with open(message1, 'w') as file:
+                    file.write(message2)
+                messagebox.showinfo("接收", f"收到来自服务端的文件:{message1}")
             except OSError:
                 break
 
-    def send_message(self, message):
+    def send_message(self, message, file_id):
+        if file_id == 1:
+            self.client_socket.send(bytes("key.txt", 'utf-8'))
+        elif file_id == 2:
+            self.client_socket.send(bytes("plaintext.txt", 'utf-8'))
         self.client_socket.send(bytes(message, 'utf-8'))
         messagebox.showinfo("成功", "发送成功")

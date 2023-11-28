@@ -10,10 +10,15 @@ class Controller:
         self.view.set_button_file2(self.open_file)
         self.view.set_button_decrypt(self.decrypt_on_button_click)
         self.view.set_button_sharekey(self.share_click)
+        self.view.set_button_send(self.send_click)
+
+    def send_click(self):
+        plaintext = self.view.text_plaintext.get("1.0", "end").strip('\n')
+        self.client.send(plaintext, 2)
 
     def share_click(self):
         key = self.view.entry_key2.get().strip('\n')
-        self.client.send(key)
+        self.client.send(key, 1)
 
     def decrypt_on_button_click(self):
         """解密按钮"""
@@ -58,4 +63,5 @@ class Controller:
     def decrypt(self, algorithm):
         cipher_text = self.view.text_ciphertext.get("1.0", "end").strip('\n')
         plain_text = algorithm.decrypt(cipher_text)
-        self.view.pop_up_window("结果", "明文", plain_text, "关闭")
+        self.view.text_ciphertext.delete(1.0, tk.END)
+        self.view.text_ciphertext.insert(tk.END, plain_text)

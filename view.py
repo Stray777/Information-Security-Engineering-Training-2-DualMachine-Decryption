@@ -11,7 +11,7 @@ class View:
         # 设置窗口大小和居中
         self.screen_width = self.root.winfo_screenwidth()
         self.screen_height = self.root.winfo_screenheight()
-        self.root.geometry(f"500x500+{(self.screen_width - 500) // 2}+{(self.screen_height - 500) // 2}")
+        self.root.geometry(f"500x600+{(self.screen_width - 500) // 2}+{(self.screen_height - 600) // 2}")
 
         # 创建容器
         self.frame2 = tk.Frame(self.root, bd=2, relief=tk.GROOVE, padx=15, pady=15)
@@ -40,9 +40,18 @@ class View:
         self.combobox_algorithm2.set("Select an algorithm")
         self.combobox_algorithm2.grid(row=4, column=1)
         self.button_decrypt = tk.Button(self.frame2, text="Decrypt")
-        self.button_decrypt.grid(row=5, column=1)
+        self.button_decrypt.grid(row=6, column=1, sticky='w')
         self.button_sharekey = tk.Button(self.frame2, text="Share")
         self.button_sharekey.grid(row=3, column=2)
+        self.label_plaintext = tk.Label(self.frame2, text="Plaintext")
+        self.label_plaintext.grid(row=5, column=0)
+        self.text_plaintext = tk.Text(self.frame2, height=10, width=30)
+        self.text_plaintext.grid(row=5, column=1, pady=5)
+        self.button_send = tk.Button(self.frame2, text="Send")
+        self.button_send.grid(row=6, column=1, sticky='e', pady=5)
+
+    def set_button_send(self, command):
+        self.button_send.configure(command=command)
 
     def set_button_sharekey(self, command):
         self.button_sharekey.configure(command=command)
