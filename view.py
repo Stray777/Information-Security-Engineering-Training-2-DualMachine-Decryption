@@ -41,6 +41,7 @@ class View:
             "PlayfairCipher",
             "VigenereCipher",
             "PermutationCipher",
+            "ColumnPermutationCipher",
             "AutokeyCipher",
             "RC4",
             "DH"
@@ -93,3 +94,5 @@ class View:
         selected_item = self.combobox_algorithm2.get()
         if selected_item == "RSA":
             messagebox.showinfo("RSA提醒", "每个值需要以分号( ; )隔开\nkey_d;key_n\n如: 233;437")
+        elif selected_item == "ColumnPermutationCipher":
+            messagebox.showinfo("ColumnPermutationCipher提醒", "每个值需要以分号( ; )隔开\n如: 2;0;1")

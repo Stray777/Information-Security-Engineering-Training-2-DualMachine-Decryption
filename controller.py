@@ -59,6 +59,9 @@ class Controller:
             dh = DH(key)
             self.view.text_plaintext.delete(1.0, tk.END)
             self.view.text_plaintext.insert(tk.END, dh.kk)
+        elif option == "ColumnPermutationCipher":
+            column = ColumnPermutationCipher(key)
+            self.decrypt(column)
 
     def open_file(self, button_id: int):
         """打开文本文件"""

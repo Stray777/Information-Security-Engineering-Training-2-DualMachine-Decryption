@@ -779,3 +779,49 @@ class DH:
                 return False
             powers.add(power)
         return True
+
+
+class ColumnPermutationCipher:
+    def __init__(self, key: str):
+        self.key = [int(x) for x in key.split(';')]
+
+    def encrypt(self, plaintext):
+        # 计算需要添加的填充字符数
+        padding = len(plaintext) % len(self.key)
+        if padding != 0:
+            plaintext += 'X' * (len(self.key) - padding)
+
+        # 创建二维矩阵，以便按列排列
+        matrix = [list(plaintext[i:i+len(self.key)]) for i in range(0, len(plaintext), len(self.key))]
+
+        # 按照密钥的顺序排列列
+        encrypted_text = ''
+        for col in self.key:
+            for row in matrix:
+                encrypted_text += row[col]
+
+        return encrypted_text
+
+    def decrypt(self, ciphertext):
+        # 计算矩阵的行数
+        rows = len(ciphertext) // len(self.key)
+
+        # 根据密钥创建二维矩阵，以便按列排列
+        matrix = [['' for _ in range(len(self.key))] for _ in range(rows)]
+
+        # 按照密钥的顺序填充矩阵的列
+        index = 0
+        for col in self.key:
+            for row in range(rows):
+                matrix[row][col] = ciphertext[index]
+                index += 1
+
+        # 从矩阵中提取解密后的文本，并删除填充字符
+        decrypted_text = ''
+        for row in matrix:
+            decrypted_text += ''.join(row)
+
+        # 删除填充字符
+        decrypted_text = decrypted_text.rstrip('X')
+
+        return decrypted_text
