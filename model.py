@@ -719,3 +719,63 @@ class RC4:
     def decrypt(self, text):
         """RC4解密"""
         return self.rc4_decrypt_base64(text)
+
+
+class DH:
+    # 以下变量为两人共享
+    prime_q = 0  # 质数（用户协商提供）
+    integer_a = 0  # 被q的原根（用户协商提供）
+    # 以下变量为二人分别持有
+    private_key_x = 0  # 整数x（用户分别提供）
+    key_y = 0  # 用户分别计算得出
+    # 以下变量为二人各自计算出的共享密钥
+    public_key_k = 0
+
+    def __init__(self, keys: str):  # 初始化函数
+        # 使用空格作为分隔符将字符串拆分为子字符串
+        keys_as_strings = keys.split(";")
+        if len(keys_as_strings) != 3 and len(keys_as_strings) != 4:
+            raise ValueError("ERROR:Value error!")
+        self.prime_q = int(keys_as_strings[0])
+        self.integer_a = int(keys_as_strings[1])
+        self.private_key_x = int(keys_as_strings[2])
+        if self.prime_q <= 1 or self._if_prime_(self.prime_q) != 1 or self.integer_a <= 0 or self.is_primitive_root(
+                self.integer_a, self.prime_q) == False or self.private_key_x <= 0:
+            raise ValueError("ERROR:Value error!")
+        self.kk = self.get_key_y()
+        if len(keys_as_strings) == 4:
+            self.key = int(keys_as_strings[3])
+            self.kk = self.get_public_key_k()
+
+
+    def get_key_y(self):  # 第一次
+        self.key_y = (self.integer_a ** self.private_key_x) % self.prime_q
+        return self.key_y
+
+    def get_public_key_k(self):  # 获取对方的key_y并计算出k（第二次）
+        public_key_k = (self.key ** self.private_key_x) % self.prime_q
+        return public_key_k
+
+    @staticmethod
+    def _if_prime_(number):  # 判断数字是否为质数
+        if number < 0:
+            return 0
+        counter = 0
+        for i in range(1, number + 1):
+            if number % i == 0:
+                counter += 1
+        if counter == 2:
+            return 1
+        else:
+            return 0
+
+    @staticmethod
+    def is_primitive_root(a, n):  # 判断a是否为n的原根
+        phi = totient(n)
+        powers = set()
+        for i in range(1, phi + 1):
+            power = pow(a, i, n)  # a^i%n
+            if power in powers:  # 都不重复是原根
+                return False
+            powers.add(power)
+        return True

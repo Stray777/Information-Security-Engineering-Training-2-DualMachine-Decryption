@@ -6,7 +6,7 @@ from tkinter import messagebox
 class Client:
     def __init__(self):
         self.HOST = "localhost"
-        self.PORT = 12345
+        self.PORT = 12344
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.client_socket.connect((self.HOST, self.PORT))
         self.receive_thread = Thread(target=self.receive_message, daemon=True)
@@ -25,8 +25,6 @@ class Client:
             try:
                 message1 = self.client_socket.recv(1024).decode('utf-8')
                 message2 = self.client_socket.recv(1024).decode('utf-8')
-                if not message1:
-                    break
                 with open(message1, 'w') as file:
                     file.write(message2)
                 messagebox.showinfo("接收", f"收到来自服务端的文件:{message1}")
