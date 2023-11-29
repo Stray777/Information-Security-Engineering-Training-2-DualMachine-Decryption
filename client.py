@@ -12,6 +12,7 @@ class Client:
         self.receive_thread = Thread(target=self.receive_message, daemon=True)
         self.receive_thread.start()
         self.send_thread = None
+        self.separator = '|'
 
     def client_close(self):
         self.client_socket.close()
@@ -23,8 +24,10 @@ class Client:
     def receive_message(self):
         while True:
             try:
-                message1 = self.client_socket.recv(1024).decode('utf-8')
-                message2 = self.client_socket.recv(1024).decode('utf-8')
+                message1 = self.client_socket.recv(1024).decode('utf-8').split(f'{self.separator}')
+                message1 = message1[0]
+                message2 = self.client_socket.recv(1024).decode('utf-8').split(f'{self.separator}')
+                message2 = message2[0]
                 with open(message1, 'w') as file:
                     file.write(message2)
                 messagebox.showinfo("接收", f"收到来自服务端的文件:{message1}")
@@ -33,8 +36,8 @@ class Client:
 
     def send_message(self, message, file_id):
         if file_id == 1:
-            self.client_socket.send(bytes("key.txt", 'utf-8'))
+            self.client_socket.sendall(bytes(f"key.txt{self.separator}", 'utf-8'))
         elif file_id == 2:
-            self.client_socket.send(bytes("plaintext.txt", 'utf-8'))
-        self.client_socket.send(bytes(message, 'utf-8'))
+            self.client_socket.sendall(bytes(f"plaintext.txt{self.separator}", 'utf-8'))
+        self.client_socket.sendall(bytes(message+f"{self.separator}", 'utf-8'))
         messagebox.showinfo("成功", "发送成功")
