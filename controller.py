@@ -43,6 +43,18 @@ class Controller:
         elif option == "PlayfairCipher":
             playfair = PlayfairCipher(key)
             self.decrypt(playfair)
+        elif option == "VigenereCipher":
+            vigenere = VigenereCipher(key)
+            self.decrypt(vigenere)
+        elif option == "PermutationCipher":
+            permutation = PermutationCipher(key)
+            self.decrypt(permutation)
+        elif option == "AutokeyCipher":
+            autokey = AutokeyCipher(key)
+            self.decrypt(autokey)
+        elif option == "RC4":
+            rc4 = RC4(key)
+            self.decrypt(rc4)
 
     def open_file(self, button_id: int):
         """打开文本文件"""
@@ -63,5 +75,5 @@ class Controller:
     def decrypt(self, algorithm):
         cipher_text = self.view.text_ciphertext.get("1.0", "end").strip('\n')
         plain_text = algorithm.decrypt(cipher_text)
-        self.view.text_ciphertext.delete(1.0, tk.END)
-        self.view.text_ciphertext.insert(tk.END, plain_text)
+        self.view.text_plaintext.delete(1.0, tk.END)
+        self.view.text_plaintext.insert(tk.END, plain_text)

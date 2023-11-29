@@ -1,6 +1,8 @@
 import string
 from sympy import totient
 import math
+from copy import deepcopy
+import base64
 
 
 class CaesarCipher:
@@ -456,3 +458,264 @@ class PlayfairCipher:
     def set_ciphertext(self):
         # 设置密文   我觉得可以直接用这个设置1明文密文，这样加密函数就不用设置入口参数了，可以直接啥都不设置
         self.__cipher_text = self.decrypt(self.__plain_text)
+
+
+class VigenereCipher:
+    def __init__(self, key):
+        self.key = key
+        self.__plain_text = ""
+        self.__cipher_text = ""
+
+    def encrypt(self, text):
+        key = self.key
+        encrypted_text = ''
+        key_repeated = (key * (len(text) // len(key) + 1))[:len(text)]
+
+        for i in range(len(text)):
+            char = text[i]
+            if char.isalpha():
+                shift = ord(key_repeated[i].upper()) - ord('A')
+                encrypted_char = chr((ord(char.upper()) - ord('A') + shift) % 26 + ord('A'))
+                # 保持原文大小写形式
+                if char.islower():
+                    encrypted_char = encrypted_char.lower()
+                encrypted_text += encrypted_char
+            else:
+                encrypted_text += char
+
+        return encrypted_text
+
+    def decrypt(self, text):
+        key = self.key
+        decrypted_text = ''
+        key_repeated = (key * (len(text) // len(key) + 1))[:len(text)]
+
+        for i in range(len(text)):
+            char = text[i]
+            if char.isalpha():
+                shift = ord(key_repeated[i].upper()) - ord('A')
+                decrypted_char = chr((ord(char.upper()) - ord('A') - shift) % 26 + ord('A'))
+                # 保持原文大小写形式
+                if char.islower():
+                    decrypted_char = decrypted_char.lower()
+                decrypted_text += decrypted_char
+            else:
+                decrypted_text += char
+
+        return decrypted_text
+
+
+class PermutationCipher:
+    def __init__(self, key):
+        self.key = key
+        self.__plain_text = ""
+        self.__cipher_text = ""
+    # 处理密钥获取密钥的长度及顺序
+
+    def processsecretkey(self, s):
+        sLength = len(s)
+        tempList = []
+        for i in range(len(s)):
+            char = s[i]
+            # tempList存入密钥单词中字母的ascii码值
+            tempList.append(ord(char))
+        # tempList2用于存储密钥单词每个字母在列表的顺序
+        sKey = []
+        # sort_tempList用于存储排序后的tempList
+        sort_tempList = sorted(tempList)
+        for index_,value in enumerate(tempList):
+            sKey.append(sort_tempList.index(value)+1)
+
+        return sKey,sLength
+
+    def encrypt(self, text):
+        s = self.key
+        # 除去明文中的空格
+        tempList = text.split(" ")
+        newText = "".join(tempList)
+        # 获取处理后明文的长度
+        textLength = len(newText)
+        # print("text:",newText)
+        # 获取密钥及密钥长度
+        sKey,sLength = self.processsecretkey(s)
+
+        # 对于长度不够处理后的明文进行补A处理
+        while textLength % sLength != 0:
+            newText+="A"
+            textLength = textLength + 1
+
+        # 更新处理后明文的长度
+        textLength = len(newText)
+        # print(f"textLength:{textLength}")
+
+        # 根据密钥的长度对明文进行分割
+        counter = 1
+        temp = []
+        tmp = []
+        for item_ in newText:
+            if  (counter % (sLength) != 0):
+                tmp.append(item_)
+                counter+=1
+
+            elif  (counter % (sLength) == 0):
+                tmp.append(item_)
+                temp.append(tmp)
+                tmp=[]
+                counter+=1
+
+        # 根据密钥对明文进行移位
+        for item_ in temp:
+            item_copy = deepcopy(item_)
+            for i in range(len(item_)):
+                item_[i] = item_copy[sKey[i]-1]
+
+        # 对移位后的明文进行拼接形成密文
+        ss = ''
+        for item_ in temp:
+            ss += "".join(item_)
+        self.__cipher_text = ss
+        return ss
+
+    # 解密
+    def decrypt(self, text):
+        s = self.key
+        # 获取密钥及密钥长度
+        sKey, sLength = self.processsecretkey(s)
+
+        # 根据密钥的长度对密文进行分割
+        newText = text
+        counter = 1
+        temp = []
+        tmp = []
+        for item_ in newText:
+            if (counter % (sLength) != 0):
+                tmp.append(item_)
+                counter += 1
+
+            elif (counter % (sLength) == 0):
+                tmp.append(item_)
+                temp.append(tmp)
+                tmp = []
+                counter += 1
+        # print(temp)
+
+        # 根据密钥对密文进行移位复原
+        for item_ in temp:
+            item_copy = deepcopy(item_)
+            # print("解密前：",item_)
+            for i in range(len(item_)):
+                item_[sKey[i] - 1] = item_copy[i]
+            # print("解密后：",item_)
+
+        # 对移位复原后的密文进行拼接形成明文
+        ss = ''
+        for item_ in temp:
+            ss += "".join(item_)
+        #  除去尾部可能出现的A
+        ss.strip("A")
+        self.__plain_text = ss
+        return ss
+
+
+class AutokeyCipher:
+    def __init__(self, key):
+        self.key = key
+        self.__plain_text = ""
+        self.__cipher_text = ""
+
+    def encrypt(self, text):
+        key = self.key
+        encrypted_text = ""
+        keystream = key
+        while len(keystream) < len(text):
+            keystream += text[len(keystream) - len(key)]
+
+        for i in range(len(text)):
+            char = text[i]
+            if char.isalpha():
+                shift = ord(keystream[i].upper()) - ord('A')
+                encrypted_char = chr((ord(char.upper()) - ord('A') + shift) % 26 + ord('A'))
+                # 保持原文大小写形式
+                if char.islower():
+                    encrypted_char = encrypted_char.lower()
+                encrypted_text += encrypted_char
+            else:
+                encrypted_text += char
+
+        return encrypted_text
+
+    def decrypt(self, text):
+        key = self.key
+        decrypted_text_with_key = ''
+        keystream = key
+        while len(keystream) < len(text):
+            keystream += text[len(keystream) - len(key)]
+
+        for i in range(len(text)):
+            char = text[i]
+            if char.isalpha():
+                shift = ord(key[i].upper()) - ord('A')
+                decrypted_char = chr((ord(char.upper()) - ord('A') - shift) % 26 + ord('A'))
+                # 保持原文大小写形式
+                if char.islower():
+                    decrypted_char = decrypted_char.lower()
+                decrypted_text_with_key += decrypted_char
+                key += decrypted_char
+            else:
+                decrypted_text_with_key += char
+        decrypted_text = decrypted_text_with_key
+        return decrypted_text
+
+
+class RC4:
+    def __init__(self, key):
+        self.key = key
+        self.__plain_text = ""
+        self.__cipher_text = ""
+
+    def rc4_setup(self, key):
+        """RC4初始化"""
+        if isinstance(key, str):
+            key = key.encode()
+
+        S = list(range(256))
+        j = 0
+        for i in range(256):
+            j = (j + S[i] + key[i % len(key)]) % 256
+            S[i], S[j] = S[j], S[i]
+
+        return S
+
+    def rc4_crypt(self, data):
+        """RC4加解密"""
+        if isinstance(data, str):
+            data = data.encode()
+
+        S = self.rc4_setup(self.key)
+        i, j = 0, 0
+        res = []
+        for byte in data:
+            i = (i + 1) % 256
+            j = (j + S[i]) % 256
+            S[i], S[j] = S[j], S[i]
+            res.append(byte ^ S[(S[i] + S[j]) % 256])
+
+        return bytes(res)
+
+    def rc4_encrypt_base64(self, data):
+        """RC4加密并转换为base64格式"""
+        encrypted_data = self.rc4_crypt(data)
+        return base64.b64encode(encrypted_data).decode()
+
+    def rc4_decrypt_base64(self, data):
+        """base64格式解码后RC4解密"""
+        encrypted_data = base64.b64decode(data)
+        return self.rc4_crypt(encrypted_data).decode()
+
+    def encrypt(self, text):
+        """RC4加密"""
+        return self.rc4_encrypt_base64(text)
+
+    def decrypt(self, text):
+        """RC4解密"""
+        return self.rc4_decrypt_base64(text)
