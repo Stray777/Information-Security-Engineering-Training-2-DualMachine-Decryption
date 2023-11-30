@@ -62,6 +62,9 @@ class Controller:
         elif option == "ColumnPermutationCipher":
             column = ColumnPermutationCipher(key)
             self.decrypt(column)
+        elif option == "DesCipher":
+            des = DesCipher(key)
+            self.decrypt(des)
 
     def open_file(self, button_id: int):
         """打开文本文件"""

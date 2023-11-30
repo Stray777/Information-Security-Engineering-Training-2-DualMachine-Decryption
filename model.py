@@ -1,3 +1,4 @@
+import binascii
 import string
 from sympy import totient
 import math
@@ -825,3 +826,359 @@ class ColumnPermutationCipher:
         decrypted_text = decrypted_text.rstrip('X')
 
         return decrypted_text
+
+
+class DesCipher:
+    def __init__(self, key: str):
+        # 出初始化DES加密的参数  IP 置换参数
+
+        # 设置默认密钥
+        # self.K = '0111010001101000011010010111001101101001011100110110100101110110'
+        self.K = self.str2bin(key)    # 转换为二进制流 形式的 str 字符串
+        self.__plain_text = ""
+        self.__cipher_text = ""
+
+        self.ip = [
+            58, 50, 42, 34, 26, 18, 10, 2, 60, 52, 44, 36, 28, 20, 12, 4,
+            62, 54, 46, 38, 30, 22, 14, 6, 64, 56, 48, 40, 32, 24, 16, 8,
+            57, 49, 41, 33, 25, 17, 9, 1, 59, 51, 43, 35, 27, 19, 11, 3,
+            61, 53, 45, 37, 29, 21, 13, 5, 63, 55, 47, 39, 31, 23, 15, 7,
+        ]
+
+        # IP 逆置换参数
+        self.ip1 = [
+            40, 8, 48, 16, 56, 24, 64, 32, 39, 7, 47, 15, 55, 23, 63, 31,
+            38, 6, 46, 14, 54, 22, 62, 30, 37, 5, 45, 13, 53, 21, 61, 29,
+            36, 4, 44, 12, 52, 20, 60, 28, 35, 3, 43, 11, 51, 19, 59, 27,
+            34, 2, 42, 10, 50, 18, 58, 26, 33, 1, 41, 9, 49, 17, 57, 25,
+        ]
+
+        # E 盒扩展盒，用来 32位明文扩展 为48位置换
+        self.E = [
+            32, 1, 2, 3, 4, 5,
+            4, 5, 6, 7, 8, 9,
+            8, 9, 10, 11, 12, 13,
+            12, 13, 14, 15, 16, 17,
+            16, 17, 18, 19, 20, 21,
+            20, 21, 22, 23, 24, 25,
+            24, 25, 26, 27, 28, 29,
+            28, 29, 30, 31, 32, 1,
+        ]
+
+        # P置换，对经过S盒之后的数据再次进行置换
+        self.P = [
+            16, 7, 20, 21, 29, 12, 28, 17,
+            1, 15, 23, 26, 5, 18, 31, 10,
+            2, 8, 24, 14, 32, 27, 3, 9,
+            19, 13, 30, 6, 22, 11, 4, 25,
+        ]
+
+        # 密钥的K1初始置换
+        self.k1 = [
+            57, 49, 41, 33, 25, 17, 9,
+            1, 58, 50, 42, 34, 26, 18,
+            10, 2, 59, 51, 43, 35, 27,
+            19, 11, 3, 60, 52, 44, 36,
+            63, 55, 47, 39, 31, 23, 15,
+            7, 62, 54, 46, 38, 30, 22,
+            14, 6, 61, 53, 45, 37, 29,
+            21, 13, 5, 28, 20, 12, 4,
+        ]
+        self.k2 = [
+            14, 17, 11, 24, 1, 5, 3, 28,
+            15, 6, 21, 10, 23, 19, 12, 4,
+            26, 8, 16, 7, 27, 20, 13, 2,
+            41, 52, 31, 37, 47, 55, 30, 40,
+            51, 45, 33, 48, 44, 49, 39, 56,
+            34, 53, 46, 42, 50, 36, 29, 32,
+        ]
+
+        # 秘钥循环移位的位数
+        self.k0 = [1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1, ]
+
+        # 全部S盒，16进制表示 S盒是为了将48位转换为32位，有8个盒子
+        self.S = [
+            [
+                0xe, 0x4, 0xd, 0x1, 0x2, 0xf, 0xb, 0x8, 0x3, 0xa, 0x6, 0xc, 0x5, 0x9, 0x0, 0x7,
+                0x0, 0xf, 0x7, 0x4, 0xe, 0x2, 0xd, 0x1, 0xa, 0x6, 0xc, 0xb, 0x9, 0x5, 0x3, 0x8,
+                0x4, 0x1, 0xe, 0x8, 0xd, 0x6, 0x2, 0xb, 0xf, 0xc, 0x9, 0x7, 0x3, 0xa, 0x5, 0x0,
+                0xf, 0xc, 0x8, 0x2, 0x4, 0x9, 0x1, 0x7, 0x5, 0xb, 0x3, 0xe, 0xa, 0x0, 0x6, 0xd,
+            ],
+            [
+                0xf, 0x1, 0x8, 0xe, 0x6, 0xb, 0x3, 0x4, 0x9, 0x7, 0x2, 0xd, 0xc, 0x0, 0x5, 0xa,
+                0x3, 0xd, 0x4, 0x7, 0xf, 0x2, 0x8, 0xe, 0xc, 0x0, 0x1, 0xa, 0x6, 0x9, 0xb, 0x5,
+                0x0, 0xe, 0x7, 0xb, 0xa, 0x4, 0xd, 0x1, 0x5, 0x8, 0xc, 0x6, 0x9, 0x3, 0x2, 0xf,
+                0xd, 0x8, 0xa, 0x1, 0x3, 0xf, 0x4, 0x2, 0xb, 0x6, 0x7, 0xc, 0x0, 0x5, 0xe, 0x9,
+            ],
+            [
+                0xa, 0x0, 0x9, 0xe, 0x6, 0x3, 0xf, 0x5, 0x1, 0xd, 0xc, 0x7, 0xb, 0x4, 0x2, 0x8,
+                0xd, 0x7, 0x0, 0x9, 0x3, 0x4, 0x6, 0xa, 0x2, 0x8, 0x5, 0xe, 0xc, 0xb, 0xf, 0x1,
+                0xd, 0x6, 0x4, 0x9, 0x8, 0xf, 0x3, 0x0, 0xb, 0x1, 0x2, 0xc, 0x5, 0xa, 0xe, 0x7,
+                0x1, 0xa, 0xd, 0x0, 0x6, 0x9, 0x8, 0x7, 0x4, 0xf, 0xe, 0x3, 0xb, 0x5, 0x2, 0xc,
+            ],
+            [
+                0x7, 0xd, 0xe, 0x3, 0x0, 0x6, 0x9, 0xa, 0x1, 0x2, 0x8, 0x5, 0xb, 0xc, 0x4, 0xf,
+                0xd, 0x8, 0xb, 0x5, 0x6, 0xf, 0x0, 0x3, 0x4, 0x7, 0x2, 0xc, 0x1, 0xa, 0xe, 0x9,
+                0xa, 0x6, 0x9, 0x0, 0xc, 0xb, 0x7, 0xd, 0xf, 0x1, 0x3, 0xe, 0x5, 0x2, 0x8, 0x4,
+                0x3, 0xf, 0x0, 0x6, 0xa, 0x1, 0xd, 0x8, 0x9, 0x4, 0x5, 0xb, 0xc, 0x7, 0x2, 0xe,
+            ],
+            [
+                0x2, 0xc, 0x4, 0x1, 0x7, 0xa, 0xb, 0x6, 0x8, 0x5, 0x3, 0xf, 0xd, 0x0, 0xe, 0x9,
+                0xe, 0xb, 0x2, 0xc, 0x4, 0x7, 0xd, 0x1, 0x5, 0x0, 0xf, 0xa, 0x3, 0x9, 0x8, 0x6,
+                0x4, 0x2, 0x1, 0xb, 0xa, 0xd, 0x7, 0x8, 0xf, 0x9, 0xc, 0x5, 0x6, 0x3, 0x0, 0xe,
+                0xb, 0x8, 0xc, 0x7, 0x1, 0xe, 0x2, 0xd, 0x6, 0xf, 0x0, 0x9, 0xa, 0x4, 0x5, 0x3,
+            ],
+            [
+                0xc, 0x1, 0xa, 0xf, 0x9, 0x2, 0x6, 0x8, 0x0, 0xd, 0x3, 0x4, 0xe, 0x7, 0x5, 0xb,
+                0xa, 0xf, 0x4, 0x2, 0x7, 0xc, 0x9, 0x5, 0x6, 0x1, 0xd, 0xe, 0x0, 0xb, 0x3, 0x8,
+                0x9, 0xe, 0xf, 0x5, 0x2, 0x8, 0xc, 0x3, 0x7, 0x0, 0x4, 0xa, 0x1, 0xd, 0xb, 0x6,
+                0x4, 0x3, 0x2, 0xc, 0x9, 0x5, 0xf, 0xa, 0xb, 0xe, 0x1, 0x7, 0x6, 0x0, 0x8, 0xd,
+            ],
+            [
+                0x4, 0xb, 0x2, 0xe, 0xf, 0x0, 0x8, 0xd, 0x3, 0xc, 0x9, 0x7, 0x5, 0xa, 0x6, 0x1,
+                0xd, 0x0, 0xb, 0x7, 0x4, 0x9, 0x1, 0xa, 0xe, 0x3, 0x5, 0xc, 0x2, 0xf, 0x8, 0x6,
+                0x1, 0x4, 0xb, 0xd, 0xc, 0x3, 0x7, 0xe, 0xa, 0xf, 0x6, 0x8, 0x0, 0x5, 0x9, 0x2,
+                0x6, 0xb, 0xd, 0x8, 0x1, 0x4, 0xa, 0x7, 0x9, 0x5, 0x0, 0xf, 0xe, 0x2, 0x3, 0xc,
+            ],
+            [
+                0xd, 0x2, 0x8, 0x4, 0x6, 0xf, 0xb, 0x1, 0xa, 0x9, 0x3, 0xe, 0x5, 0x0, 0xc, 0x7,
+                0x1, 0xf, 0xd, 0x8, 0xa, 0x3, 0x7, 0x4, 0xc, 0x5, 0x6, 0xb, 0x0, 0xe, 0x9, 0x2,
+                0x7, 0xb, 0x4, 0x1, 0x9, 0xc, 0xe, 0x2, 0x0, 0x6, 0xa, 0xd, 0xf, 0x3, 0x5, 0x8,
+                0x2, 0x1, 0xe, 0x7, 0x4, 0xa, 0x8, 0xd, 0xf, 0xc, 0x9, 0x0, 0x3, 0x5, 0x6, 0xb,
+            ],
+        ]
+
+    # 规范化明文输入
+    def std_plaintext(self, pliantext: str) -> str:
+        std_plain_txt = ''
+        new_str = pliantext.replace('\n', ' ')  # 除去文本中的换行符
+        for item in new_str:
+            std_plain_txt += item
+        return std_plain_txt
+
+    def __substitution(self, table: str, self_table: list) -> str:
+        """
+        :param table: 需要进行置换的列表,是一个01字符串
+        :param self_table: 置换表，在__init__中初始化了
+        :return: 返回置换后的01字符串
+        """
+        # 置换用的 IP 置换啥的
+        sub_result = ""
+        for i in self_table:
+            sub_result += table[i - 1]
+        return sub_result
+
+    def str2bin(self, string: str) -> str:
+        """
+        将明文转为二进制字符串:
+        :param string: 任意字符串
+        :return:二进制字符串
+        """
+        plaintext_list = list(bytes(string, 'utf8'))  # 将字符串转成bytes类型，再转成list
+        result = []  # 定义返回结果
+        for num in plaintext_list:        # 不够的位数填充为 0，切片切掉前缀，添加列尾
+            result.append(bin(num)[2:].zfill(8))  # 将列表的每个元素转成二进制字符串，8位宽度
+        return "".join(result)
+
+    def bin2str(self, binary: str) -> str:
+        """
+        二进制字符串转成字符串
+        :param binary:
+        :return:
+        """
+        list_bin = [binary[i:i + 8] for i in range(0, len(binary), 8)]  # 对二进制字符串进行切分，每8位为一组
+        list_int = []     # 获取从 i 起到 i 后的 全部八个字符
+        for b in list_bin:
+            list_int.append(int(b, 2))  # 对二进制转成int
+        result = bytes(list_int).decode()  # 将列表转成bytes，在进行解码，得到字符串
+        return result
+
+    def __bin2int(self, binary: str) -> list:
+        """
+        由于加密之后的二进制无法直接转成字符，有不可见字符在，utf8可能无法解码，所以需要将二进制字符串每8位转成int型号列表，用于转成bytes再转hex
+        :param binary: 二进制字符串
+        :return: int型列表
+        """
+        # 为了解决一些奇怪的字符编解码出现的问题（原来的方案是直接字符串硬转ascii码，但是实际上会出现奇怪字符，而且奇怪字符在编解码时会超长）
+        list_bin = [binary[i:i + 8] for i in range(0, len(binary), 8)]  # 对二进制字符串进行切分，每8位为一组
+        list_int = []
+        for b in list_bin:
+            list_int.append(int(b, 2))  # 尾插
+        return list_int
+
+    def __int2bin(self, list_int: list) -> str:
+        result = []
+        for num in list_int:
+            result.append(bin(num)[2:].zfill(8))   # int转二进制，去除0b填充0
+        return ''.join(result)
+
+    def __get_block_list(self, binary: str) -> list:
+        """
+        对明文二进制串进行切分，每64位为一块，DES加密以64位为一组进行加密的
+        :type binary: 二进制串
+        """
+        len_binary = len(binary)
+        if len_binary % 64 != 0:     # 明文长度不够，进行填充，注意，这是对二进制明文字符串操作
+            binary_block = binary + ("0" * (64 - (len_binary % 64)))
+            return [binary_block[i:i + 64] for i in range(0, len(binary_block), 64)]
+        else:
+            return [binary[j:j + 64] for j in range(0, len(binary), 64)]  # 分片
+
+    def modify_secretkey(self):  # 规范化密钥输入  # 测试用的函数，修改默认密钥 可以留着也可以删掉
+        """
+        修改默认密钥函数
+        :return: None
+        """
+        # 规范化密钥输入
+        print('当前二进制形式密钥为:{}'.format(self.K))    # 插入密钥字符串
+        print("当前字符串形式密钥为：{}".format(self.bin2str(self.K)))
+        newkey = input("输入新的密钥（长度为8）：")   # 获取新的密钥
+        if len(newkey) != 8:              # 不是 8位
+            print("密钥长度不符合，请重新输入：")
+            self.modify_secretkey()
+        else:
+            bin_key = self.str2bin(newkey)
+            self.K = bin_key
+            print("当前二进制形式密钥为:{}".format(self.K))  # 实际上并没有奇偶校验
+
+    def __f_funtion(self, right: str, key: str):
+        """
+        :param right: 明文二进制的字符串加密过程的右半段
+        :param key: 当前轮数的密钥
+        :return: 进行E扩展，与key异或操作，S盒操作后返回32位01字符串
+        """
+        # 对right进行E扩展 右半部分进行扩展， 32 -> 48
+        e_result = self.__substitution(right, self.E)
+        # 与key 进行异或操作
+        xor_result = self.__xor_function(e_result, key)
+        # 进入S盒子  # 进行选择置换
+        s_result = self.__s_box(xor_result)
+        # 进行P置换  # S 盒输出要进行P置换
+        p_result = self.__substitution(s_result, self.P)
+        return p_result
+
+    def __get_key_list(self):
+        """
+        :return: 返回加密过程中16轮的子密钥
+        """
+        # 子密钥生成  左右两段密钥合并
+        key = self.__substitution(self.K, self.k1)  # 密钥进行置换 K 为默认密钥
+        left_key = key[0:28]      # 数组片
+        right_key = key[28:56]
+        keys = []
+        for i in range(1, 17):
+            move = self.k0[i - 1]      # 实现循环左移，数组切片进行移动，左移位数查表
+            move_left = left_key[move:28] + left_key[0:move]
+            move_right = right_key[move:28] + right_key[0:move]
+            left_key = move_left
+            right_key = move_right
+            move_key = left_key + right_key
+            ki = self.__substitution(move_key, self.k2)
+            keys.append(ki)
+        return keys        # 合并全部子密钥
+
+    def __xor_function(self, xor1: str, xor2: str):
+        """
+        :param xor1: 01字符串
+        :param xor2: 01字符串
+        :return: 异或操作返回的结果
+        """
+        # 简单异或运算
+        size = len(xor1)   # 32 位
+        result = ""
+        for i in range(0, size):
+            result += '0' if xor1[i] == xor2[i] else '1'
+        return result
+
+    def __s_box(self, xor_result: str):
+        """
+        :param xor_result: 48位01字符串
+        :return: 返回32位01字符串
+        """
+        # S 盒选择
+        result = ""
+        for i in range(0, 8):
+            # 将48位数据分为6组，循环进行
+            block = xor_result[i * 6:(i + 1) * 6]   # 切片
+            line = int(block[0] + block[5], 2)  # 提取末尾的数字 2 进制->十进制
+            colmn = int(block[1:4], 2)  # 中间四个
+            res = bin(self.S[i][line * 16 + colmn])[2:]  # 查表结果转二进制
+            if len(res) < 4:       # 填补至 4 位
+                res = '0' * (4 - len(res)) + res
+            result += res
+        return result
+
+    def __iteration(self, bin_plaintext: str, key_list: list):
+        """
+        :param bin_plaintext: 01字符串，64位
+        :param key_list: 密钥列表，共16个
+        :return: 进行F函数以及和left异或操作之后的字符串
+        """
+        # 二进制明文比特流切片
+        left = bin_plaintext[0:32]
+        right = bin_plaintext[32:64]   # 左右切片
+        for i in range(0, 16):
+            next_lift = right  # 暂存变量，用来交换
+            f_result = self.__f_funtion(right, key_list[i])   # 和key表做异或，S盒操作
+            next_right = self.__xor_function(left, f_result)  # 做异或 然后交换
+            left = next_lift
+            right = next_right
+        bin_plaintext_result = left + right
+        return bin_plaintext_result[32:] + bin_plaintext_result[:32]  # 结果合并 ip逆转在下边
+
+    def encrypt(self, plaintext):
+        """
+        :param plaintext: 明文字符串
+        :return: 密文字符串
+        """
+        plaintext = self.std_plaintext(plaintext)  # 明文标准化
+        bin_plaintext = self.str2bin(plaintext)   # 明文转二进制
+        bin_plaintext_block = self.__get_block_list(bin_plaintext)  # 二进制变为块块们
+        ciphertext_bin_list = []  # 密文集合
+        key_list = self.__get_key_list()  # 获取 16轮 密钥集
+        for block in bin_plaintext_block:
+            # 初代ip置换
+            sub_ip = self.__substitution(block, self.ip)  # ip置换
+            ite_result = self.__iteration(sub_ip, key_list)
+            # 逆ip置换
+            sub_ip1 = self.__substitution(ite_result, self.ip1)
+            ciphertext_bin_list.append(sub_ip1)
+        ciphertext_bin = ''.join(ciphertext_bin_list)
+        result = self.__bin2int(ciphertext_bin)
+        self.__cipher_text = bytes(result).hex().upper()  # 密文二进制转16进制，读取不出错
+        return self.__cipher_text
+
+    def decrypt(self, ciphertext):
+        '''
+        :param ciphertext: 密文字符串
+        :return: 明文字符串
+        '''
+
+        b_ciphertext = binascii.a2b_hex(ciphertext)
+        bin_ciphertext = self.__int2bin(list(b_ciphertext))
+        bin_plaintext_list = []
+        key_list = self.__get_key_list()
+        key_list = key_list[::-1]  # 反向切片，置换密钥
+        bin_ciphertext_block = [bin_ciphertext[i:i + 64] for i in range(0, len(bin_ciphertext), 64)]
+        for block in bin_ciphertext_block:
+            sub_ip = self.__substitution(block, self.ip)
+            ite = self.__iteration(sub_ip, key_list)
+            sub_ip1 = self.__substitution(ite, self.ip1)
+            bin_plaintext_list.append(sub_ip1)
+        bin_plaintext = ''.join(bin_plaintext_list).replace('00000000', '')
+        self.__plain_text = self.bin2str(bin_plaintext)  # 密文 01 字符串转换
+        return self.__plain_text
+
+    def get_ciphertext(self):
+        return self.__cipher_text
+
+    def get_plaintext(self):
+        return self.__plain_text
+
+    def set_plaintext(self, text: str):
+        # 设置明文
+        self.__plain_text = text
+
+    def set_ciphertext(self):
+        # 设置密文   我觉得可以直接用这个设置1明文密文，这样加密函数就不用设置入口参数了，可以直接啥都不设置
+        self.__cipher_text = self.decrypt(self.__plain_text)
